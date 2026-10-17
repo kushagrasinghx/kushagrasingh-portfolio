@@ -9,8 +9,6 @@ import Stack from "@/components/Stack";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
-export const revalidate = 3600;
-
 export default async function Page() {
   const [profile, repos, featured] = await Promise.all([
     getProfile(),
