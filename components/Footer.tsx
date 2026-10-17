@@ -1,8 +1,11 @@
+"use client";
+
 import { site } from "@/lib/content";
 import Clock from "./Clock";
-import type { Profile } from "@/lib/github";
+import { useLiveGitHub } from "./LiveGitHub";
 
-export default function Footer({ profile }: { profile: Profile | null }) {
+export default function Footer() {
+  const { profile } = useLiveGitHub();
   const year = new Date().getFullYear();
 
   return (

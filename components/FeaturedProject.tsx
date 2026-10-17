@@ -90,7 +90,7 @@ export default function FeaturedProject({ repo }: { repo: RepoStats | null }) {
           </div>
         </div>
 
-        {/* Live numbers, refreshed hourly from the GitHub API */}
+        {/* Baked in at build time, then refreshed from the GitHub API on load */}
         <div className="grid grid-cols-3 divide-x divide-[color:var(--color-line)] border-t border-line bg-surface-2/60">
           <Stat
             icon={

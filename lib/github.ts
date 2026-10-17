@@ -2,27 +2,30 @@ import { site } from "./content";
 
 const API = "https://api.github.com";
 
-/** Revalidate GitHub data hourly so the numbers stay live without hammering the API. */
-const REVALIDATE = 3600;
+const isServer = typeof window === "undefined";
 
 function headers(): HeadersInit {
   const h: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
   };
-  // Optional: raises the rate limit from 60 to 5000 requests/hour.
-  if (process.env.GITHUB_TOKEN) {
+  // Optional, build-time only: raises the rate limit from 60 to 5000/hour.
+  // Never sent from the browser — the token would be public in the bundle.
+  if (isServer && process.env.GITHUB_TOKEN) {
     h.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   }
   return h;
 }
 
+/**
+ * Runs twice: once at build time to bake numbers into the static export, then
+ * again in the browser so a deployed page shows today's figures. GitHub's
+ * 60-requests/hour anonymous limit is per visitor IP, and the four calls below
+ * come back with `max-age=60`, so reloads mostly hit the browser cache.
+ */
 async function gh<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(`${API}${path}`, {
-      headers: headers(),
-      next: { revalidate: REVALIDATE },
-    });
+    const res = await fetch(`${API}${path}`, { headers: headers() });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
@@ -103,6 +106,38 @@ export async function getRepoStats(name: string): Promise<RepoStats | null> {
     latestTag: latest?.tag_name ?? null,
     latestReleaseAt: latest?.published_at ?? null,
     latestReleaseUrl: latest?.html_url ?? null,
+  };
+}
+
+export type GitHubData = {
+  profile: Profile | null;
+  repos: Repo[];
+  featured: RepoStats | null;
+};
+
+/** Everything the page needs, in one round of parallel calls. */
+export async function getGitHubData(): Promise<GitHubData> {
+  const [profile, repos, featured] = await Promise.all([
+    getProfile(),
+    getRepos(),
+    getRepoStats(site.featuredRepo),
+  ]);
+  return { profile, repos, featured };
+}
+
+/**
+ * Merge a client-side refresh over the baked-in data, field by field. A rate
+ * limit or offline visitor yields nulls, which must never wipe out numbers the
+ * build already got right.
+ */
+export function mergeGitHubData(
+  prev: GitHubData,
+  fresh: GitHubData,
+): GitHubData {
+  return {
+    profile: fresh.profile ?? prev.profile,
+    repos: fresh.repos.length > 0 ? fresh.repos : prev.repos,
+    featured: fresh.featured ?? prev.featured,
   };
 }
 

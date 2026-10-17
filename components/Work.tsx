@@ -1,15 +1,15 @@
+"use client";
+
 import { workRepos } from "@/lib/content";
-import { formatCount, type Repo, type RepoStats } from "@/lib/github";
+import { formatCount, type Repo } from "@/lib/github";
+import { useLiveGitHub } from "./LiveGitHub";
 import FeaturedProject from "./FeaturedProject";
 import Reveal from "./Reveal";
 import { ArrowIcon, ForkIcon, StarIcon } from "./Icons";
 
-type Props = {
-  featured: RepoStats | null;
-  repos: Repo[];
-};
+export default function Work() {
+  const { featured, repos } = useLiveGitHub();
 
-export default function Work({ featured, repos }: Props) {
   // Keep the hand-picked order from content.ts, dropping anything that 404s.
   const byName = new Map(repos.map((r) => [r.name, r]));
   const others = workRepos
